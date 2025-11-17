@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建健身计划 - 运动管家</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-blue-600">🏃 运动管家</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">返回首页</a>
+                    <button onclick="Auth.logout()" class="text-gray-600 hover:text-gray-900">退出登录</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">创建新的健身计划</h2>
+
+        <div id="error-container"></div>
+
+        <form id="create-plan-form" class="bg-white rounded-lg shadow-md p-6 space-y-6">
+            <!-- 计划名称 -->
+            <div>
+                <label for="plan-name" class="block text-sm font-medium text-gray-700 mb-2">
+                    计划名称 <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="plan-name"
+                    required
+                    maxlength="50"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="例如：减脂训练计划"
+                >
+            </div>
+
+            <!-- 计划描述 -->
+            <div>
+                <label for="plan-description" class="block text-sm font-medium text-gray-700 mb-2">
+                    计划描述（可选）
+                </label>
+                <textarea
+                    id="plan-description"
+                    rows="3"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="简单描述一下这个计划的目标..."
+                ></textarea>
+            </div>
+
+            <!-- 锻炼项目 -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <label class="block text-sm font-medium text-gray-700">
+                        锻炼项目 <span class="text-red-500">*</span>
+                    </label>
+                    <button
+                        type="button"
+                        onclick="addExercise()"
+                        class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                        + 添加锻炼项目
+                    </button>
+                </div>
+
+                <div id="exercises-container" class="space-y-4">
+                    <!-- 第一个锻炼项目 -->
+                    <div class="exercise-item border border-gray-200 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">项目名称</label>
+                                <input
+                                    type="text"
+                                    class="exercise-name w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="例如：跑步"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">时长（分钟）</label>
+                                <input
+                                    type="number"
+                                    class="exercise-duration w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="30"
+                                    min="1"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">次数</label>
+                                <input
+                                    type="number"
+                                    class="exercise-reps w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="20"
+                                    min="1"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">强度</label>
+                                <select class="exercise-intensity w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="low">低</option>
+                                    <option value="medium" selected>中</option>
+                                    <option value="high">高</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-end">
+                                <button
+                                    type="button"
+                                    onclick="removeExercise(this)"
+                                    class="w-full bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200"
+                                >
+                                    删除
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">提示：时长和次数至少填写一个</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="flex space-x-4">
+                <button
+                    type="submit"
+                    id="submit-btn"
+                    class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-200 font-medium"
+                >
+                    创建计划
+                </button>
+                <a
+                    href="/"
+                    class="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-300 transition duration-200 font-medium text-center"
+                >
+                    取消
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // 检查登录状态
+        Auth.requireAuth();
+
+        let exerciseCount = 1;
+
+        // 添加锻炼项目
+        function addExercise() {
+            exerciseCount++;
+            const container = document.getElementById('exercises-container');
+            const exerciseHTML = `
+                <div class="exercise-item border border-gray-200 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">项目名称</label>
+                            <input
+                                type="text"
+                                class="exercise-name w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                placeholder="例如：俯卧撑"
+                                required
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">时长（分钟）</label>
+                            <input
+                                type="number"
+                                class="exercise-duration w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                placeholder="30"
+                                min="1"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">次数</label>
+                            <input
+                                type="number"
+                                class="exercise-reps w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                placeholder="20"
+                                min="1"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">强度</label>
+                            <select class="exercise-intensity w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <option value="low">低</option>
+                                <option value="medium" selected>中</option>
+                                <option value="high">高</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-end">
+                            <button
+                                type="button"
+                                onclick="removeExercise(this)"
+                                class="w-full bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200"
+                            >
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">提示：时长和次数至少填写一个</p>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', exerciseHTML);
+        }
+
+        // 删除锻炼项目
+        function removeExercise(btn) {
+            const items = document.querySelectorAll('.exercise-item');
+            if (items.length === 1) {
+                UI.showError('至少需要保留一个锻炼项目');
+                return;
+            }
+            btn.closest('.exercise-item').remove();
+        }
+
+        // 提交表单
+        document.getElementById('create-plan-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '创建中...';
+
+            try {
+                // 收集表单数据
+                const planName = document.getElementById('plan-name').value;
+                const planDescription = document.getElementById('plan-description').value;
+
+                // 收集锻炼项目
+                const exercises = [];
+                document.querySelectorAll('.exercise-item').forEach((item, index) => {
+                    const name = item.querySelector('.exercise-name').value;
+                    const duration = item.querySelector('.exercise-duration').value;
+                    const reps = item.querySelector('.exercise-reps').value;
+                    const intensity = item.querySelector('.exercise-intensity').value;
+
+                    // 验证至少有时长或次数
+                    if (!duration && !reps) {
+                        throw new Error(`锻炼项目 "${name}" 必须填写时长或次数`);
+                    }
+
+                    const exercise = {
+                        name,
+                        intensity,
+                        order_index: index,
+                    };
+
+                    if (duration) {
+                        exercise.duration_minutes = parseInt(duration);
+                    }
+                    if (reps) {
+                        exercise.repetitions = parseInt(reps);
+                    }
+
+                    exercises.push(exercise);
+                });
+
+                // 创建计划
+                const planData = {
+                    name: planName,
+                    description: planDescription || null,
+                    exercises,
+                };
+
+                await API.createPlan(planData);
+
+                // 跳转到主页
+                window.location.href = '/?success=created';
+            } catch (error) {
+                UI.showError(error.message || '创建失败，请检查填写的信息');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '创建计划';
+            }
+        });
+
+        // 检查是否有成功消息
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'created') {
+            UI.showSuccess('健身计划创建成功！');
+        }
+    </script>
+</body>
+</html>

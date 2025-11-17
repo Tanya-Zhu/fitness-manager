@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计划详情 - 运动管家</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-blue-600">🏃 运动管家</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">返回首页</a>
+                    <button onclick="Auth.logout()" class="text-gray-600 hover:text-gray-900">退出登录</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="error-container"></div>
+        <div id="success-container"></div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="mt-4 text-gray-600">加载中...</p>
+        </div>
+
+        <!-- 计划详情 -->
+        <div id="plan-detail" class="hidden">
+            <!-- 计划头部 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <h2 id="plan-name" class="text-3xl font-bold text-gray-900 mb-2"></h2>
+                        <p id="plan-description" class="text-gray-600 mb-4"></p>
+
+                        <!-- 训练统计 -->
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                <div class="text-2xl font-bold text-blue-600" id="stat-total-executions">-</div>
+                                <div class="text-xs text-gray-600 mt-1">总训练次数</div>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-3 border border-green-100">
+                                <div class="text-lg font-bold text-green-600" id="stat-last-training">-</div>
+                                <div class="text-xs text-gray-600 mt-1">最近训练</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 状态和管理按钮 -->
+                    <div class="ml-8 flex flex-col items-end">
+                        <span id="plan-status-badge" class="mb-4"></span>
+                        <div class="flex flex-col space-y-2">
+                            <button
+                                onclick="editPlan()"
+                                class="bg-blue-600 text-white px-4 py-1.5 rounded text-xs hover:bg-blue-700 transition duration-200"
+                            >
+                                编辑计划
+                            </button>
+                            <button
+                                onclick="togglePlanStatus()"
+                                id="toggle-status-btn"
+                                class="bg-yellow-600 text-white px-4 py-1.5 rounded text-xs hover:bg-yellow-700 transition duration-200"
+                            >
+                                暂停计划
+                            </button>
+                            <button
+                                onclick="deletePlan()"
+                                class="bg-red-600 text-white px-4 py-1.5 rounded text-xs hover:bg-red-700 transition duration-200"
+                            >
+                                删除计划
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mt-6">
+                    <button
+                        onclick="showRecordCompletionModal()"
+                        class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
+                    >
+                        ✓ 记录完成情况
+                    </button>
+                    <button
+                        onclick="showInviteModal()"
+                        class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition duration-200"
+                    >
+                        👥 邀请好友
+                    </button>
+                    <button
+                        onclick="showLeaderboard()"
+                        class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition duration-200"
+                    >
+                        🏆 排行榜
+                    </button>
+                </div>
+            </div>
+
+            <!-- 锻炼项目列表 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900">锻炼项目</h3>
+                    <button
+                        onclick="showAddExerciseModal()"
+                        class="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                        + 添加项目
+                    </button>
+                </div>
+
+                <div id="exercises-list" class="space-y-4">
+                    <!-- 锻炼项目将在这里动态生成 -->
+                </div>
+            </div>
+
+            <!-- 完成历史和统计 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900">训练完成情况</h3>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div id="completion-stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <p class="text-sm text-blue-600 font-medium">总训练次数</p>
+                        <p class="text-3xl font-bold text-blue-900" id="stat-total-count">-</p>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <p class="text-sm text-green-600 font-medium">平均完成率</p>
+                        <p class="text-3xl font-bold text-green-900" id="stat-avg-completion">-</p>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <p class="text-sm text-purple-600 font-medium">最近训练</p>
+                        <p class="text-lg font-bold text-purple-900" id="stat-last-date">-</p>
+                    </div>
+                    <div class="bg-orange-50 rounded-lg p-4">
+                        <p class="text-sm text-orange-600 font-medium">本周训练</p>
+                        <p class="text-3xl font-bold text-orange-900" id="stat-week-count">-</p>
+                    </div>
+                </div>
+
+                <!-- 历史记录列表 -->
+                <div id="execution-history" class="space-y-3">
+                    <!-- 历史记录将在这里动态生成 -->
+                </div>
+
+                <div id="no-executions" class="text-center py-8 text-gray-500" style="display: none;">
+                    还没有训练记录，点击上方"记录完成情况"开始记录吧！
+                </div>
+            </div>
+
+            <!-- 提醒设置 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900">提醒设置</h3>
+                    <div class="flex space-x-3">
+                        <button
+                            onclick="exportToCalendar()"
+                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 text-sm"
+                        >
+                            📅 导出到日历
+                        </button>
+                        <button
+                            onclick="showAddReminderModal()"
+                            class="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                            + 添加提醒
+                        </button>
+                    </div>
+                </div>
+
+                <div id="reminders-list" class="space-y-4">
+                    <!-- 提醒将在这里动态生成 -->
+                </div>
+
+                <div id="no-reminders" class="text-center py-8 text-gray-500" style="display: none;">
+                    还没有设置提醒
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加锻炼项目的Modal -->
+    <div id="add-exercise-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">添加锻炼项目</h3>
+            <form id="add-exercise-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">项目名称</label>
+                    <input type="text" id="new-exercise-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="例如：深蹲">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">时长（分钟）</label>
+                    <input type="number" id="new-exercise-duration" class="w-full px-4 py-2 border border-gray-300 rounded-lg" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">次数</label>
+                    <input type="number" id="new-exercise-reps" class="w-full px-4 py-2 border border-gray-300 rounded-lg" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">强度</label>
+                    <select id="new-exercise-intensity" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="low">低</option>
+                        <option value="medium" selected>中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">添加</button>
+                    <button type="button" onclick="hideAddExerciseModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加提醒的Modal -->
+    <div id="add-reminder-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">添加提醒</h3>
+            <form id="add-reminder-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">提醒时间</label>
+                    <input type="time" id="new-reminder-time" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">频率</label>
+                    <select id="new-reminder-frequency" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="daily">每天</option>
+                        <option value="weekly">每周</option>
+                    </select>
+                </div>
+                <div id="days-selector">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">重复日期</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="checkbox" value="1" class="mr-1"> 周一</label>
+                        <label class="inline-flex items-center"><input type="checkbox" value="2" class="mr-1"> 周二</label>
+                        <label class="inline-flex items-center"><input type="checkbox" value="3" class="mr-1"> 周三</label>
+                        <label class="inline-flex items-center"><input type="checkbox" value="4" class="mr-1"> 周四</label>
+                        <label class="inline-flex items-center"><input type="checkbox" value="5" class="mr-1"> 周五</label>
+                        <label class="inline-flex items-center"><input type="checkbox" value="6" class="mr-1"> 周六</label>
+                        <label class="inline-flex items-center"><input type="checkbox" value="7" class="mr-1"> 周日</label>
+                    </div>
+                </div>
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">添加</button>
+                    <button type="button" onclick="hideAddReminderModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 记录完成情况的Modal -->
+    <div id="record-completion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">记录训练完成情况</h3>
+            <form id="record-completion-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">训练日期</label>
+                    <input type="date" id="execution-date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">训练项目完成情况</label>
+                    <div id="exercises-checklist" class="space-y-3 border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                        <!-- 动态生成的训练项目列表 -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">备注</label>
+                    <textarea id="execution-notes" class="w-full px-4 py-2 border border-gray-300 rounded-lg" rows="3" placeholder="记录本次训练的感受、注意事项等..."></textarea>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">保存</button>
+                    <button type="button" onclick="hideRecordCompletionModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 邀请好友的Modal -->
+    <div id="invite-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">邀请好友</h3>
+            <form id="invite-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">好友邮箱</label>
+                    <input
+                        type="email"
+                        id="invitee-email"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="请输入好友的邮箱地址"
+                        required
+                    >
+                </div>
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">发送邀请</button>
+                    <button type="button" onclick="hideInviteModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 排行榜的Modal -->
+    <div id="leaderboard-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">🏆 排行榜</h3>
+                <button onclick="hideLeaderboard()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="leaderboard-content">
+                <!-- 排行榜内容将在这里动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js?v=5"></script>
+    <script>
+        Auth.requireAuth();
+
+        let currentPlan = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const planId = urlParams.get('id');
+
+        if (!planId) {
+            window.location.href = '/';
+        }
+
+        async function loadPlanDetail() {
+            try {
+                currentPlan = await API.getPlanDetail(planId);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('plan-detail').classList.remove('hidden');
+
+                // 填充计划信息
+                document.getElementById('plan-name').textContent = currentPlan.name;
+                document.getElementById('plan-description').textContent = currentPlan.description || '暂无描述';
+
+                const statusBadge = currentPlan.status === 'active'
+                    ? '<span class="inline-block px-3 py-1 text-sm font-semibold text-green-800 bg-green-200 rounded">进行中</span>'
+                    : '<span class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-200 rounded">已暂停</span>';
+                document.getElementById('plan-status-badge').innerHTML = statusBadge;
+
+                // 更新暂停/恢复按钮
+                const toggleBtn = document.getElementById('toggle-status-btn');
+                toggleBtn.textContent = currentPlan.status === 'active' ? '暂停计划' : '恢复计划';
+
+                // 加载并显示统计数据
+                await loadStatistics();
+
+                // 渲染锻炼项目
+                renderExercises();
+
+                // 渲染提醒
+                renderReminders();
+
+                // 加载训练完成历史和统计
+                await loadExecutionHistory();
+            } catch (error) {
+                UI.showError('加载计划详情失败: ' + error.message);
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                // 获取训练记录
+                const response = await API.getPlanExecutions(1, 100, planId);
+                const executions = response.plan_executions || [];
+
+                // 1. 总训练次数
+                const totalExecutions = executions.length;
+                document.getElementById('stat-total-executions').textContent = totalExecutions;
+
+                // 2. 最近训练时间
+                if (executions.length > 0) {
+                    const lastExecution = executions[0];
+                    const lastDate = new Date(lastExecution.execution_date);
+                    const today = new Date();
+                    const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+
+                    let lastTrainingText;
+                    if (diffDays === 0) {
+                        lastTrainingText = '今天';
+                    } else if (diffDays === 1) {
+                        lastTrainingText = '昨天';
+                    } else if (diffDays < 7) {
+                        lastTrainingText = diffDays + '天前';
+                    } else {
+                        lastTrainingText = lastDate.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+                    }
+                    document.getElementById('stat-last-training').textContent = lastTrainingText;
+                } else {
+                    document.getElementById('stat-last-training').textContent = '未开始';
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+                // 显示默认值
+                document.getElementById('stat-total-executions').textContent = '0';
+                document.getElementById('stat-last-training').textContent = '-';
+            }
+        }
+
+        function renderExercises() {
+            const container = document.getElementById('exercises-list');
+            container.innerHTML = '';
+
+            currentPlan.exercises.forEach(exercise => {
+                const detail = exercise.duration_minutes
+                    ? `${exercise.duration_minutes}分钟`
+                    : `${exercise.repetitions}次`;
+                const intensityMap = { low: '低强度', medium: '中强度', high: '高强度' };
+
+                container.innerHTML += `
+                    <div class="border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-semibold text-gray-900">${exercise.name}</h4>
+                            <p class="text-sm text-gray-600">${detail} · ${intensityMap[exercise.intensity]}</p>
+                        </div>
+                        <button onclick="deleteExercise('${exercise.id}')" class="text-red-600 hover:text-red-800">删除</button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderReminders() {
+            const container = document.getElementById('reminders-list');
+            const noReminders = document.getElementById('no-reminders');
+            container.innerHTML = '';
+
+            if (!currentPlan.reminders || currentPlan.reminders.length === 0) {
+                noReminders.style.display = 'block';
+                return;
+            }
+
+            noReminders.style.display = 'none';
+            currentPlan.reminders.forEach(reminder => {
+                const frequencyMap = { daily: '每天', weekly: '每周' };
+                const daysMap = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 7: '日' };
+                const daysStr = reminder.days_of_week ? reminder.days_of_week.map(d => '周' + daysMap[d]).join(', ') : '';
+
+                container.innerHTML += `
+                    <div class="border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold text-gray-900">${reminder.reminder_time} · ${frequencyMap[reminder.frequency]}</p>
+                            ${daysStr ? `<p class="text-sm text-gray-600">${daysStr}</p>` : ''}
+                        </div>
+                        <button onclick="deleteReminder('${reminder.id}')" class="text-red-600 hover:text-red-800">删除</button>
+                    </div>
+                `;
+            });
+        }
+
+        function editPlan() {
+            const name = prompt('输入新的计划名称:', currentPlan.name);
+            if (!name) return;
+
+            API.updatePlan(planId, { name }).then(() => {
+                UI.showSuccess('计划已更新');
+                loadPlanDetail();
+            }).catch(error => {
+                UI.showError('更新失败: ' + error.message);
+            });
+        }
+
+        function togglePlanStatus() {
+            alert('暂停/恢复功能将在下一版本实现');
+        }
+
+        function deletePlan() {
+            if (!confirm('确定要删除这个计划吗？删除后无法恢复。')) return;
+
+            API.deletePlan(planId).then(() => {
+                window.location.href = '/?success=deleted';
+            }).catch(error => {
+                UI.showError('删除失败: ' + error.message);
+            });
+        }
+
+        function showAddExerciseModal() {
+            document.getElementById('add-exercise-modal').classList.remove('hidden');
+        }
+
+        function hideAddExerciseModal() {
+            document.getElementById('add-exercise-modal').classList.add('hidden');
+            document.getElementById('add-exercise-form').reset();
+        }
+
+        function showAddReminderModal() {
+            document.getElementById('add-reminder-modal').classList.remove('hidden');
+        }
+
+        function hideAddReminderModal() {
+            document.getElementById('add-reminder-modal').classList.add('hidden');
+            document.getElementById('add-reminder-form').reset();
+        }
+
+        document.getElementById('add-exercise-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('new-exercise-name').value;
+            const duration = document.getElementById('new-exercise-duration').value;
+            const reps = document.getElementById('new-exercise-reps').value;
+            const intensity = document.getElementById('new-exercise-intensity').value;
+
+            if (!duration && !reps) {
+                UI.showError('时长和次数至少填写一个');
+                return;
+            }
+
+            try {
+                const exerciseData = { name, intensity };
+                if (duration) exerciseData.duration_minutes = parseInt(duration);
+                if (reps) exerciseData.repetitions = parseInt(reps);
+
+                await API.addExercise(planId, exerciseData);
+                hideAddExerciseModal();
+                UI.showSuccess('锻炼项目已添加');
+                loadPlanDetail();
+            } catch (error) {
+                UI.showError('添加失败: ' + error.message);
+            }
+        });
+
+        document.getElementById('add-reminder-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const time = document.getElementById('new-reminder-time').value;
+            const frequency = document.getElementById('new-reminder-frequency').value;
+            const days = Array.from(document.querySelectorAll('#days-selector input:checked')).map(cb => parseInt(cb.value));
+
+            if ((frequency === 'weekly' || frequency === 'custom') && days.length === 0) {
+                UI.showError('请选择重复日期');
+                return;
+            }
+
+            try {
+                const reminderData = {
+                    reminder_time: time + ':00',
+                    frequency,
+                    days_of_week: days.length > 0 ? days : null,
+                    is_enabled: true
+                };
+
+                await API.createReminder(planId, reminderData);
+                hideAddReminderModal();
+                UI.showSuccess('提醒已添加');
+                loadPlanDetail();
+            } catch (error) {
+                UI.showError('添加失败: ' + error.message);
+            }
+        });
+
+        async function deleteExercise(exerciseId) {
+            if (!confirm('确定要删除这个锻炼项目吗？')) return;
+
+            try {
+                await API.deleteExercise(planId, exerciseId);
+                UI.showSuccess('锻炼项目已删除');
+                loadPlanDetail();
+            } catch (error) {
+                UI.showError('删除失败: ' + error.message);
+            }
+        }
+
+        async function deleteReminder(reminderId) {
+            if (!confirm('确定要删除这个提醒吗？')) return;
+
+            try {
+                await API.deleteReminder(planId, reminderId);
+                UI.showSuccess('提醒已删除');
+                loadPlanDetail();
+            } catch (error) {
+                UI.showError('删除失败: ' + error.message);
+            }
+        }
+
+        async function exportToCalendar() {
+            try {
+                UI.showSuccess('正在导出日历文件...');
+                await API.exportPlanCalendar(planId);
+                UI.showSuccess('日历已导出！您可以将 .ics 文件导入到系统日历应用中。');
+            } catch (error) {
+                UI.showError('导出失败: ' + error.message);
+            }
+        }
+
+        function showRecordCompletionModal() {
+            // 设置今天为默认日期
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('execution-date').value = today;
+
+            // 生成训练项目清单
+            const checklist = document.getElementById('exercises-checklist');
+            checklist.innerHTML = '';
+
+            if (!currentPlan.exercises || currentPlan.exercises.length === 0) {
+                checklist.innerHTML = '<p class="text-gray-500 text-center py-4">该计划还没有训练项目</p>';
+                return;
+            }
+
+            currentPlan.exercises.forEach(exercise => {
+                const detail = exercise.duration_minutes
+                    ? `计划: ${exercise.duration_minutes}分钟`
+                    : `计划: ${exercise.repetitions}次`;
+
+                checklist.innerHTML += `
+                    <div class="border border-gray-200 rounded-lg p-3" data-exercise-id="${exercise.id}">
+                        <div class="flex items-start space-x-3">
+                            <input type="checkbox"
+                                   id="ex-${exercise.id}"
+                                   checked
+                                   class="mt-1 w-5 h-5 text-green-600 rounded"
+                                   onchange="toggleExerciseFields('${exercise.id}')">
+                            <div class="flex-1">
+                                <label for="ex-${exercise.id}" class="font-medium text-gray-900 cursor-pointer">
+                                    ${exercise.name}
+                                </label>
+                                <p class="text-sm text-gray-600">${detail}</p>
+                                <div class="mt-2 space-y-2" id="fields-${exercise.id}">
+                                    ${exercise.duration_minutes ? `
+                                        <input type="number"
+                                               id="duration-${exercise.id}"
+                                               placeholder="实际时长（分钟）"
+                                               class="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+                                               min="1">
+                                    ` : ''}
+                                    ${exercise.repetitions ? `
+                                        <input type="number"
+                                               id="reps-${exercise.id}"
+                                               placeholder="实际次数"
+                                               class="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+                                               min="1">
+                                    ` : ''}
+                                    <input type="text"
+                                           id="notes-${exercise.id}"
+                                           placeholder="备注（可选）"
+                                           class="w-full px-3 py-1 border border-gray-300 rounded text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('record-completion-modal').classList.remove('hidden');
+        }
+
+        function hideRecordCompletionModal() {
+            document.getElementById('record-completion-modal').classList.add('hidden');
+            document.getElementById('record-completion-form').reset();
+        }
+
+        function toggleExerciseFields(exerciseId) {
+            const checkbox = document.getElementById(`ex-${exerciseId}`);
+            const fields = document.getElementById(`fields-${exerciseId}`);
+
+            if (checkbox.checked) {
+                fields.style.display = 'block';
+            } else {
+                fields.style.display = 'none';
+            }
+        }
+
+        document.getElementById('record-completion-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const executionDate = document.getElementById('execution-date').value;
+            const notes = document.getElementById('execution-notes').value;
+
+            // 收集每个训练项目的完成情况
+            const exerciseExecutions = [];
+            currentPlan.exercises.forEach(exercise => {
+                const checkbox = document.getElementById(`ex-${exercise.id}`);
+                const completed = checkbox.checked;
+
+                const execution = {
+                    exercise_id: exercise.id,
+                    completed: completed
+                };
+
+                if (completed) {
+                    const duration = document.getElementById(`duration-${exercise.id}`)?.value;
+                    const reps = document.getElementById(`reps-${exercise.id}`)?.value;
+                    const exerciseNotes = document.getElementById(`notes-${exercise.id}`)?.value;
+
+                    if (duration) execution.actual_duration_minutes = parseInt(duration);
+                    if (reps) execution.actual_repetitions = parseInt(reps);
+                    if (exerciseNotes) execution.notes = exerciseNotes;
+                }
+
+                exerciseExecutions.push(execution);
+            });
+
+            if (exerciseExecutions.length === 0) {
+                UI.showError('请至少选择一个训练项目');
+                return;
+            }
+
+            try {
+                const executionData = {
+                    plan_id: planId,
+                    execution_date: executionDate,
+                    notes: notes || null,
+                    exercise_executions: exerciseExecutions
+                };
+
+                await API.createPlanExecution(executionData);
+                hideRecordCompletionModal();
+                UI.showSuccess('训练完成情况已记录！');
+                // 重新加载完成历史和统计数据
+                loadExecutionHistory();
+                loadStatistics();
+            } catch (error) {
+                UI.showError('记录失败: ' + error.message);
+            }
+        });
+
+        async function loadExecutionHistory() {
+            try {
+                const response = await API.getPlanExecutions(1, 100, planId);
+                const executions = response.plan_executions || [];
+
+                const historyContainer = document.getElementById('execution-history');
+                const noExecutions = document.getElementById('no-executions');
+
+                if (executions.length === 0) {
+                    noExecutions.style.display = 'block';
+                    historyContainer.innerHTML = '';
+                    // 清空统计
+                    document.getElementById('stat-total-count').textContent = '0';
+                    document.getElementById('stat-avg-completion').textContent = '0%';
+                    document.getElementById('stat-last-date').textContent = '-';
+                    document.getElementById('stat-week-count').textContent = '0';
+                    return;
+                }
+
+                noExecutions.style.display = 'none';
+
+                // 计算统计数据
+                const totalCount = executions.length;
+                const avgCompletion = executions.reduce((sum, ex) => sum + ex.completion_rate, 0) / totalCount;
+                const lastExecution = executions[0]; // 已按日期降序排列
+
+                // 计算本周训练次数
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const weekCount = executions.filter(ex => {
+                    const exDate = new Date(ex.execution_date);
+                    return exDate >= oneWeekAgo;
+                }).length;
+
+                // 更新统计卡片
+                document.getElementById('stat-total-count').textContent = totalCount;
+                document.getElementById('stat-avg-completion').textContent = avgCompletion.toFixed(1) + '%';
+                document.getElementById('stat-last-date').textContent = formatDate(lastExecution.execution_date);
+                document.getElementById('stat-week-count').textContent = weekCount;
+
+                // 渲染历史记录
+                historyContainer.innerHTML = '';
+                executions.forEach(execution => {
+                    const completionColor = execution.completion_rate === 100 ? 'green' :
+                                          execution.completion_rate >= 80 ? 'blue' :
+                                          execution.completion_rate >= 50 ? 'yellow' : 'red';
+
+                    historyContainer.innerHTML += `
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="font-semibold text-gray-900">${formatDate(execution.execution_date)}</span>
+                                        <span class="inline-block px-2 py-1 text-xs font-semibold text-${completionColor}-800 bg-${completionColor}-200 rounded">
+                                            完成率: ${execution.completion_rate.toFixed(1)}%
+                                        </span>
+                                        <span class="text-sm text-gray-600">
+                                            ${execution.completed_exercises}/${execution.total_exercises} 项完成
+                                        </span>
+                                    </div>
+                                    ${execution.plan_name ? `<p class="text-sm text-gray-500 mb-1">${execution.plan_name}</p>` : ''}
+                                </div>
+                                <button onclick="viewExecutionDetail('${execution.id}')"
+                                        class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    查看详情
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('加载完成历史失败:', error);
+            }
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (date.toDateString() === today.toDateString()) {
+                return '今天';
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return '昨天';
+            } else {
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                return `${month}月${day}日`;
+            }
+        }
+
+        async function viewExecutionDetail(executionId) {
+            try {
+                const execution = await API.getPlanExecution(executionId);
+
+                // Calculate overall completion rate based on actual vs planned
+                let exerciseRates = [];
+                execution.exercise_executions.forEach(ex => {
+                    const exercise = currentPlan.exercises.find(e => e.id === ex.exercise_id);
+                    if (!ex.completed) {
+                        exerciseRates.push(0);
+                    } else if (exercise) {
+                        if (exercise.duration_minutes && ex.actual_duration_minutes) {
+                            const rate = Math.min((ex.actual_duration_minutes / exercise.duration_minutes) * 100, 100);
+                            exerciseRates.push(rate);
+                        } else if (exercise.repetitions && ex.actual_repetitions) {
+                            const rate = Math.min((ex.actual_repetitions / exercise.repetitions) * 100, 100);
+                            exerciseRates.push(rate);
+                        } else {
+                            exerciseRates.push(100);
+                        }
+                    } else {
+                        exerciseRates.push(100);
+                    }
+                });
+                const overallRate = exerciseRates.length > 0 ? (exerciseRates.reduce((a, b) => a + b, 0) / exerciseRates.length) : 0;
+
+                let detailHtml = `
+                    <div class="space-y-3">
+                        <p class="text-lg font-semibold">训练日期: ${formatDate(execution.execution_date)}</p>
+                        <p class="text-gray-700">整体完成率: ${overallRate.toFixed(1)}%</p>
+                `;
+
+                detailHtml += '<div class="border-t pt-3 mt-3"><p class="font-medium mb-2">训练项目详情:</p>';
+
+                execution.exercise_executions.forEach((ex, index) => {
+                    const exercise = currentPlan.exercises.find(e => e.id === ex.exercise_id);
+                    if (exercise) {
+                        const rate = exerciseRates[index];
+                        const rateColor = rate === 0 ? 'red' : rate === 100 ? 'green' : rate >= 80 ? 'blue' : 'yellow';
+                        // 只有完成率达到100%才显示为完成
+                        const isFullyCompleted = rate === 100;
+
+                        detailHtml += `
+                            <div class="mb-3 pl-4 pb-3 border-b border-gray-100">
+                                <div class="flex items-center justify-between mb-1">
+                                    <p class="font-medium ${isFullyCompleted ? 'text-gray-900' : 'text-gray-400 line-through'}">
+                                        ${isFullyCompleted ? '✓' : '✗'} ${exercise.name}
+                                    </p>
+                                    <span class="text-xs font-semibold px-2 py-1 rounded bg-${rateColor}-100 text-${rateColor}-800">
+                                        ${rate.toFixed(1)}%
+                                    </span>
+                                </div>
+                                ${exercise.duration_minutes ? `<p class="text-sm text-gray-600">计划: ${exercise.duration_minutes}分钟</p>` : ''}
+                                ${exercise.repetitions ? `<p class="text-sm text-gray-600">计划: ${exercise.repetitions}次</p>` : ''}
+                                ${ex.actual_duration_minutes ? `<p class="text-sm text-gray-700">实际: ${ex.actual_duration_minutes}分钟</p>` : ''}
+                                ${ex.actual_repetitions ? `<p class="text-sm text-gray-700">实际: ${ex.actual_repetitions}次</p>` : ''}
+                                ${ex.notes ? `<p class="text-sm text-gray-600 mt-1">备注: ${ex.notes}</p>` : ''}
+                            </div>
+                        `;
+                    }
+                });
+
+                detailHtml += '</div>';
+
+                if (execution.notes) {
+                    detailHtml += `<div class="border-t pt-3 mt-3"><p class="font-medium">整体备注:</p><p class="text-gray-700">${execution.notes}</p></div>`;
+                }
+
+                detailHtml += '</div>';
+
+                // 使用浏览器原生的弹窗显示详情
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold">训练详情</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                        </div>
+                        ${detailHtml}
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (error) {
+                UI.showError('加载详情失败: ' + error.message);
+            }
+        }
+
+        // ========== 邀请好友相关 ==========
+
+        function showInviteModal() {
+            document.getElementById('invite-modal').classList.remove('hidden');
+        }
+
+        function hideInviteModal() {
+            document.getElementById('invite-modal').classList.add('hidden');
+            document.getElementById('invite-form').reset();
+        }
+
+        document.getElementById('invite-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('invitee-email').value;
+
+            try {
+                await API.invitePlanMember(planId, email);
+                UI.showSuccess(`已成功邀请 ${email}`);
+                hideInviteModal();
+            } catch (error) {
+                UI.showError('邀请失败: ' + error.message);
+            }
+        });
+
+        // ========== 排行榜相关 ==========
+
+        async function showLeaderboard() {
+            document.getElementById('leaderboard-modal').classList.remove('hidden');
+            await loadLeaderboard();
+        }
+
+        function hideLeaderboard() {
+            document.getElementById('leaderboard-modal').classList.add('hidden');
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const response = await API.getPlanLeaderboard(planId);
+                const leaderboard = response.leaderboard || [];
+
+                const container = document.getElementById('leaderboard-content');
+
+                if (leaderboard.length === 0) {
+                    container.innerHTML = '<p class="text-center text-gray-500 py-8">暂无排行数据</p>';
+                    return;
+                }
+
+                // 按完成率排序的排行榜
+                const byCompletionRate = [...leaderboard].sort((a, b) => b.avg_completion_rate - a.avg_completion_rate);
+
+                // 按训练次数排序的排行榜
+                const byExecutionCount = [...leaderboard].sort((a, b) => b.total_executions - a.total_executions);
+
+                let html = `
+                    <!-- Tab 切换 -->
+                    <div class="border-b border-gray-200 mb-4">
+                        <nav class="flex space-x-4">
+                            <button onclick="switchLeaderboardTab('rate')" id="tab-rate" class="leaderboard-tab px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium">
+                                完成率排行榜
+                            </button>
+                            <button onclick="switchLeaderboardTab('count')" id="tab-count" class="leaderboard-tab px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                训练次数排行榜
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- 完成率排行榜 -->
+                    <div id="leaderboard-rate" class="leaderboard-content">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">排名</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">平均完成率</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">训练次数</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">最后训练</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                `;
+
+                byCompletionRate.forEach((entry, index) => {
+                    const rank = index + 1;
+                    const rankClass = rank === 1 ? 'text-yellow-600 font-bold text-xl' :
+                                     rank === 2 ? 'text-gray-400 font-bold text-lg' :
+                                     rank === 3 ? 'text-orange-600 font-bold text-lg' :
+                                     'text-gray-600';
+                    const rankDisplay = rank === 1 ? '🥇' :
+                                       rank === 2 ? '🥈' :
+                                       rank === 3 ? '🥉' : rank;
+
+                    const rateColor = entry.avg_completion_rate >= 90 ? 'text-green-600' :
+                                     entry.avg_completion_rate >= 70 ? 'text-yellow-600' :
+                                     'text-gray-600';
+
+                    html += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-center ${rankClass}">${rankDisplay}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-gray-900">${entry.user_name}</div>
+                                <div class="text-sm text-gray-500">${entry.user_email}</div>
+                            </td>
+                            <td class="px-4 py-3 text-center ${rateColor} font-semibold text-lg">${entry.avg_completion_rate}%</td>
+                            <td class="px-4 py-3 text-center text-gray-700">${entry.total_executions}次</td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600">
+                                ${entry.last_execution_date ? new Date(entry.last_execution_date).toLocaleDateString('zh-CN') : '-'}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 训练次数排行榜 -->
+                    <div id="leaderboard-count" class="leaderboard-content hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">排名</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">训练次数</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">平均完成率</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">最后训练</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                `;
+
+                byExecutionCount.forEach((entry, index) => {
+                    const rank = index + 1;
+                    const rankClass = rank === 1 ? 'text-yellow-600 font-bold text-xl' :
+                                     rank === 2 ? 'text-gray-400 font-bold text-lg' :
+                                     rank === 3 ? 'text-orange-600 font-bold text-lg' :
+                                     'text-gray-600';
+                    const rankDisplay = rank === 1 ? '🥇' :
+                                       rank === 2 ? '🥈' :
+                                       rank === 3 ? '🥉' : rank;
+
+                    const rateColor = entry.avg_completion_rate >= 90 ? 'text-green-600' :
+                                     entry.avg_completion_rate >= 70 ? 'text-yellow-600' :
+                                     'text-gray-600';
+
+                    html += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-center ${rankClass}">${rankDisplay}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-gray-900">${entry.user_name}</div>
+                                <div class="text-sm text-gray-500">${entry.user_email}</div>
+                            </td>
+                            <td class="px-4 py-3 text-center text-gray-700 font-semibold text-lg">${entry.total_executions}次</td>
+                            <td class="px-4 py-3 text-center ${rateColor}">${entry.avg_completion_rate}%</td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600">
+                                ${entry.last_execution_date ? new Date(entry.last_execution_date).toLocaleDateString('zh-CN') : '-'}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            } catch (error) {
+                UI.showError('加载排行榜失败: ' + error.message);
+            }
+        }
+
+        // Tab 切换函数
+        function switchLeaderboardTab(tab) {
+            // 更新tab样式
+            const tabs = document.querySelectorAll('.leaderboard-tab');
+            tabs.forEach(t => {
+                t.classList.remove('border-blue-500', 'text-blue-600', 'font-medium');
+                t.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            const activeTab = document.getElementById(`tab-${tab}`);
+            activeTab.classList.remove('border-transparent', 'text-gray-500');
+            activeTab.classList.add('border-blue-500', 'text-blue-600', 'font-medium');
+
+            // 切换内容
+            document.getElementById('leaderboard-rate').classList.add('hidden');
+            document.getElementById('leaderboard-count').classList.add('hidden');
+            document.getElementById(`leaderboard-${tab}`).classList.remove('hidden');
+        }
+
+        async function init() {
+            await loadPlanDetail();
+            await loadExecutionHistory();
+        }
+
+        init();
+    </script>
+</body>
+</html>

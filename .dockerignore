@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# Python缓存
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 本地文件
+.env
+*.db
+*.sqlite3
+.DS_Store
+*.log
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 文档（部署时不需要）
+*.md
+!README.md
+
+# 本地脚本
+*.sh
+!start.sh
+
+# Specify
+.specify/
+.claude/
+
+# 临时文件
+*.tmp
+*.pid
+*.url

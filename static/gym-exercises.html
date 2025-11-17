@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身房器械训练 - 运动管家</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-blue-600">🏃 运动管家</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">健身计划</a>
+                    <a href="/workout-logs.html" class="text-gray-600 hover:text-gray-900">运动记录</a>
+                    <a href="/gym-exercises.html" class="text-blue-600 font-semibold">器械训练</a>
+                    <span id="user-email" class="text-gray-700"></span>
+                    <button onclick="Auth.logout()" class="text-gray-600 hover:text-gray-900">退出登录</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="error-container"></div>
+        <div id="success-container"></div>
+
+        <!-- 页面标题和操作 -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">健身房器械训练</h1>
+                <p class="mt-2 text-gray-600">记录您的力量训练详细数据</p>
+            </div>
+            <div class="flex gap-3">
+                <button
+                    onclick="showAddExerciseModal()"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200"
+                >
+                    + 添加训练记录
+                </button>
+                <button
+                    onclick="showExerciseSelector()"
+                    class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition duration-200"
+                >
+                    📊 查看趋势
+                </button>
+            </div>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
+                    <input
+                        type="date"
+                        id="filter-start-date"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">结束日期</label>
+                    <input
+                        type="date"
+                        id="filter-end-date"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+                <div class="flex items-end">
+                    <button
+                        onclick="applyFilters()"
+                        class="w-full bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition duration-200"
+                    >
+                        筛选
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 训练记录列表 -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div id="gym-exercises-list">
+                <!-- 训练记录将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 分页 -->
+        <div id="pagination-container" class="mt-6"></div>
+    </div>
+
+    <!-- 添加/编辑训练记录模态框 -->
+    <div id="exercise-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-900 mb-6">添加训练记录</h3>
+
+            <form id="exercise-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">训练日期 *</label>
+                        <input
+                            type="date"
+                            id="exercise-date"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">器械/动作名称 *</label>
+                        <div class="relative">
+                            <input
+                                type="text"
+                                id="exercise-name"
+                                required
+                                readonly
+                                placeholder="点击选择动作..."
+                                onclick="showExerciseLibrary()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white hover:bg-gray-50"
+                            />
+                            <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">备注</label>
+                        <textarea
+                            id="exercise-notes"
+                            rows="2"
+                            placeholder="整体训练感受、注意事项等..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        ></textarea>
+                    </div>
+
+                    <!-- 组数信息 -->
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <label class="block text-sm font-medium text-gray-700">训练组数 *</label>
+                            <button
+                                type="button"
+                                onclick="addSetRow()"
+                                class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                            >
+                                + 添加一组
+                            </button>
+                        </div>
+                        <div id="sets-container" class="space-y-3">
+                            <!-- 组数行将在这里动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4 mt-6">
+                    <button
+                        type="button"
+                        onclick="hideExerciseModal()"
+                        class="flex-1 bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+                    >
+                        取消
+                    </button>
+                    <button
+                        type="submit"
+                        class="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+                    >
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 详情查看模态框 -->
+    <div id="detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">训练详情</h3>
+                <button
+                    onclick="hideDetailModal()"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="detail-content" class="space-y-4">
+                <!-- 详情内容将在这里动态生成 -->
+            </div>
+
+            <div class="mt-6">
+                <button
+                    onclick="hideDetailModal()"
+                    class="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+                >
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 动作选择模态框（用于查看趋势） -->
+    <div id="exercise-selector-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">选择动作查看趋势</h3>
+                <button
+                    onclick="hideExerciseSelector()"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <input
+                    type="text"
+                    id="exercise-search"
+                    placeholder="搜索动作名称..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    oninput="filterExerciseList()"
+                >
+            </div>
+
+            <div id="exercise-list" class="space-y-2 max-h-96 overflow-y-auto">
+                <!-- 动作列表将在这里动态生成 -->
+            </div>
+
+            <div class="mt-6">
+                <button
+                    onclick="hideExerciseSelector()"
+                    class="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+                >
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 趋势图表模态框 -->
+    <div id="trend-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 my-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900" id="trend-modal-title">动作进度趋势</h3>
+                <button
+                    onclick="hideTrendModal()"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <canvas id="trendChart" style="max-height: 400px;"></canvas>
+            </div>
+
+            <div class="mt-6">
+                <button
+                    onclick="hideTrendModal()"
+                    class="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+                >
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 动作选择模态框 -->
+    <div id="exercise-library-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">选择训练动作</h3>
+                <button
+                    onclick="hideExerciseLibrary()"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="mb-6">
+                <input
+                    type="text"
+                    id="exercise-search"
+                    placeholder="搜索动作名称..."
+                    oninput="searchExerciseLibrary(this.value)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+            </div>
+
+            <!-- 动作分类 -->
+            <div id="exercise-categories" class="space-y-6">
+                <!-- 动作分类将在这里动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/exercise-library.js"></script>
+    <script src="/js/api.js?v=4"></script>
+    <script>
+        // 检查登录状态
+        if (!Auth.requireAuth()) {
+            window.location.href = '/login.html';
+        }
+
+        let currentPage = 1;
+        let currentStartDate = null;
+        let currentEndDate = null;
+        let editingExerciseId = null;
+        let setCounter = 0;
+
+        // 加载训练记录列表
+        async function loadGymExercises() {
+            try {
+                const response = await API.getGymExercises(
+                    currentPage,
+                    20,
+                    currentStartDate,
+                    currentEndDate
+                );
+
+                displayGymExercises(response.gym_exercise_logs);
+                displayPagination(response.pagination);
+            } catch (error) {
+                UI.showError('加载失败: ' + error.message);
+            }
+        }
+
+        // 显示训练记录列表
+        function displayGymExercises(exercises) {
+            const container = document.getElementById('gym-exercises-list');
+
+            if (exercises.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <p class="text-gray-500 text-lg">还没有训练记录</p>
+                        <button
+                            onclick="showAddExerciseModal()"
+                            class="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                            立即添加
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // 按日期分组
+            const groupedByDate = {};
+            exercises.forEach(exercise => {
+                if (!groupedByDate[exercise.workout_date]) {
+                    groupedByDate[exercise.workout_date] = [];
+                }
+                groupedByDate[exercise.workout_date].push(exercise);
+            });
+
+            // 转换为数组并按日期降序排序
+            const dateGroups = Object.keys(groupedByDate)
+                .sort((a, b) => b.localeCompare(a))
+                .map(date => ({
+                    date: date,
+                    exercises: groupedByDate[date]
+                }));
+
+            container.innerHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练日期</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练动作</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">总组数</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">总次数</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${dateGroups.map(group => {
+                            const totalSets = group.exercises.reduce((sum, ex) => sum + ex.total_sets, 0);
+                            const totalReps = group.exercises.reduce((sum, ex) => sum + ex.total_reps, 0);
+                            const exerciseNames = group.exercises.map(ex => ex.exercise_name).join('、');
+                            const exerciseIds = group.exercises.map(ex => ex.id);
+
+                            return `
+                                <tr class="hover:bg-gray-50 cursor-pointer" onclick="viewDayDetail('${group.date}')">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${group.date}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="flex flex-wrap gap-1">
+                                            ${group.exercises.map(ex => `
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    ${ex.exercise_name}
+                                                </span>
+                                            `).join('')}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${totalSets} 组</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${totalReps} 次</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onclick="event.stopPropagation()">
+                                        <button onclick="viewDayDetail('${group.date}')" class="text-blue-600 hover:text-blue-900 mr-3">查看</button>
+                                        <button onclick="deleteDayExercises('${group.date}', ${JSON.stringify(exerciseIds).replace(/"/g, '&quot;')})" class="text-red-600 hover:text-red-900">删除</button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 显示分页
+        function displayPagination(pagination) {
+            const container = document.getElementById('pagination-container');
+
+            if (pagination.total_pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                pages.push(i);
+            }
+
+            container.innerHTML = `
+                <div class="flex justify-center space-x-2">
+                    ${pages.map(page => `
+                        <button
+                            onclick="goToPage(${page})"
+                            class="px-4 py-2 rounded ${page === pagination.page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}"
+                        >
+                            ${page}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 添加组数行
+        function addSetRow(setNumber = null, reps = '', weight = '', notes = '') {
+            setCounter++;
+            const setNum = setNumber !== null ? setNumber : setCounter;
+
+            const container = document.getElementById('sets-container');
+            const row = document.createElement('div');
+            row.className = 'flex gap-3 items-start set-row';
+            row.dataset.setNumber = setNum;
+            row.innerHTML = `
+                <div class="flex-shrink-0 w-16">
+                    <label class="block text-xs text-gray-600 mb-1">第 ${setNum} 组</label>
+                </div>
+                <div class="flex-1">
+                    <input
+                        type="number"
+                        placeholder="次数"
+                        min="1"
+                        required
+                        value="${reps}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        data-field="reps"
+                    />
+                </div>
+                <div class="flex-1">
+                    <input
+                        type="number"
+                        placeholder="重量(kg)"
+                        min="0"
+                        step="0.5"
+                        value="${weight}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        data-field="weight"
+                    />
+                </div>
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        placeholder="备注"
+                        value="${notes}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        data-field="notes"
+                    />
+                </div>
+                <div class="flex-shrink-0">
+                    <button
+                        type="button"
+                        onclick="removeSetRow(this)"
+                        class="text-red-600 hover:text-red-800 px-2 py-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        // 移除组数行
+        function removeSetRow(button) {
+            const row = button.closest('.set-row');
+            row.remove();
+
+            // 重新编号
+            const rows = document.querySelectorAll('.set-row');
+            rows.forEach((row, index) => {
+                const setNum = index + 1;
+                row.dataset.setNumber = setNum;
+                row.querySelector('label').textContent = `第 ${setNum} 组`;
+            });
+            setCounter = rows.length;
+        }
+
+        // 收集组数数据
+        function collectSetsData() {
+            const rows = document.querySelectorAll('.set-row');
+            const sets = [];
+
+            rows.forEach((row, index) => {
+                const reps = parseInt(row.querySelector('[data-field="reps"]').value);
+                const weightInput = row.querySelector('[data-field="weight"]').value;
+                const weight = weightInput ? parseFloat(weightInput) : null;
+                const notes = row.querySelector('[data-field="notes"]').value || null;
+
+                sets.push({
+                    set_number: index + 1,
+                    reps: reps,
+                    weight: weight,
+                    notes: notes
+                });
+            });
+
+            return sets;
+        }
+
+        // 显示添加模态框
+        function showAddExerciseModal() {
+            editingExerciseId = null;
+            setCounter = 0;
+            document.getElementById('modal-title').textContent = '添加训练记录';
+            document.getElementById('exercise-form').reset();
+            document.getElementById('exercise-date').valueAsDate = new Date();
+            document.getElementById('sets-container').innerHTML = '';
+
+            // 添加默认3组
+            for (let i = 0; i < 3; i++) {
+                addSetRow();
+            }
+
+            document.getElementById('exercise-modal').classList.remove('hidden');
+        }
+
+        // 隐藏模态框
+        function hideExerciseModal() {
+            document.getElementById('exercise-modal').classList.add('hidden');
+            editingExerciseId = null;
+            setCounter = 0;
+        }
+
+        // 编辑训练记录
+        async function editExercise(exerciseId) {
+            try {
+                const exercise = await API.getGymExercise(exerciseId);
+
+                editingExerciseId = exerciseId;
+                setCounter = 0;
+                document.getElementById('modal-title').textContent = '编辑训练记录';
+                document.getElementById('exercise-date').value = exercise.workout_date;
+                document.getElementById('exercise-name').value = exercise.exercise_name;
+                document.getElementById('exercise-notes').value = exercise.notes || '';
+
+                // 清空并重新填充组数
+                document.getElementById('sets-container').innerHTML = '';
+                exercise.sets.forEach(set => {
+                    addSetRow(
+                        set.set_number,
+                        set.reps,
+                        set.weight || '',
+                        set.notes || ''
+                    );
+                });
+
+                document.getElementById('exercise-modal').classList.remove('hidden');
+            } catch (error) {
+                UI.showError('加载失败: ' + error.message);
+            }
+        }
+
+        // 查看某天所有训练详情
+        async function viewDayDetail(workoutDate) {
+            try {
+                // 从当前列表中筛选出该日期的所有训练
+                const response = await API.getGymExercises(1, 100, workoutDate, workoutDate);
+                const dayExercises = response.gym_exercise_logs;
+
+                // 获取每个训练的详细信息
+                const detailedExercises = await Promise.all(
+                    dayExercises.map(ex => API.getGymExercise(ex.id))
+                );
+
+                let totalSets = 0;
+                let totalReps = 0;
+
+                detailedExercises.forEach(exercise => {
+                    totalSets += exercise.sets.length;
+                    exercise.sets.forEach(set => {
+                        totalReps += set.reps;
+                    });
+                });
+
+                const detailContent = document.getElementById('detail-content');
+                detailContent.innerHTML = `
+                    <div class="pb-4 border-b">
+                        <h4 class="text-xl font-bold text-gray-900">${workoutDate} 训练记录</h4>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pb-4 border-b">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">总组数</p>
+                            <p class="text-2xl font-bold text-blue-600">${totalSets}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">总次数</p>
+                            <p class="text-2xl font-bold text-green-600">${totalReps}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        ${detailedExercises.map((exercise, idx) => {
+                            const exerciseReps = exercise.sets.reduce((sum, set) => sum + set.reps, 0);
+
+                            return `
+                                <div class="border rounded-lg p-4 bg-gray-50">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <div>
+                                            <h5 class="font-bold text-lg text-gray-900">${idx + 1}. ${exercise.exercise_name}</h5>
+                                            <p class="text-sm text-gray-600">${exercise.sets.length} 组 · ${exerciseReps} 次</p>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="hideDetailModal(); editExercise('${exercise.id}')" class="text-blue-600 hover:text-blue-900 text-sm font-medium">编辑</button>
+                                            <button onclick="hideDetailModal(); deleteExercise('${exercise.id}')" class="text-red-600 hover:text-red-900 text-sm font-medium">删除</button>
+                                        </div>
+                                    </div>
+
+                                    ${exercise.notes ? `
+                                        <div class="mb-3 text-sm text-gray-700">
+                                            <span class="font-medium">备注：</span>${exercise.notes}
+                                        </div>
+                                    ` : ''}
+
+                                    <div class="space-y-2">
+                                        ${exercise.sets.map(set => `
+                                            <div class="bg-white p-2 rounded flex items-center justify-between text-sm">
+                                                <div class="flex items-center space-x-3">
+                                                    <span class="font-medium text-gray-700 w-12">第${set.set_number}组</span>
+                                                    <span class="text-gray-600">${set.reps} 次</span>
+                                                    ${set.weight ? `<span class="text-gray-600">× ${set.weight} kg</span>` : ''}
+                                                    ${set.weight ? `<span class="text-blue-600 font-medium">= ${(set.reps * set.weight).toFixed(1)} kg</span>` : ''}
+                                                </div>
+                                                ${set.notes ? `<span class="text-xs text-gray-500">${set.notes}</span>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (error) {
+                UI.showError('加载失败: ' + error.message);
+            }
+        }
+
+        // 查看单个训练详情
+        async function viewExerciseDetail(exerciseId) {
+            try {
+                const exercise = await API.getGymExercise(exerciseId);
+
+                let totalReps = 0;
+                let totalVolume = 0;
+
+                exercise.sets.forEach(set => {
+                    totalReps += set.reps;
+                    totalVolume += set.reps * (set.weight || 0);
+                });
+
+                const detailContent = document.getElementById('detail-content');
+                detailContent.innerHTML = `
+                    <div class="grid grid-cols-2 gap-4 pb-4 border-b">
+                        <div>
+                            <p class="text-sm text-gray-600">训练日期</p>
+                            <p class="text-lg font-semibold">${exercise.workout_date}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">器械/动作</p>
+                            <p class="text-lg font-semibold">${exercise.exercise_name}</p>
+                        </div>
+                    </div>
+
+                    ${exercise.notes ? `
+                        <div class="pb-4 border-b">
+                            <p class="text-sm text-gray-600 mb-1">备注</p>
+                            <p class="text-gray-900">${exercise.notes}</p>
+                        </div>
+                    ` : ''}
+
+                    <div class="grid grid-cols-3 gap-4 pb-4 border-b">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">总组数</p>
+                            <p class="text-2xl font-bold text-blue-600">${exercise.sets.length}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">总次数</p>
+                            <p class="text-2xl font-bold text-green-600">${totalReps}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">总容量</p>
+                            <p class="text-2xl font-bold text-purple-600">${totalVolume.toFixed(1)} kg</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-3">详细组数</p>
+                        <div class="space-y-2">
+                            ${exercise.sets.map(set => `
+                                <div class="bg-gray-50 p-3 rounded-lg flex items-center justify-between">
+                                    <div class="flex items-center space-x-4">
+                                        <span class="font-semibold text-gray-700 w-16">第 ${set.set_number} 组</span>
+                                        <span class="text-gray-600">${set.reps} 次</span>
+                                        ${set.weight ? `<span class="text-gray-600">× ${set.weight} kg</span>` : ''}
+                                        ${set.weight ? `<span class="text-blue-600 font-medium">= ${(set.reps * set.weight).toFixed(1)} kg</span>` : ''}
+                                    </div>
+                                    ${set.notes ? `<span class="text-sm text-gray-500">${set.notes}</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (error) {
+                UI.showError('加载失败: ' + error.message);
+            }
+        }
+
+        // 隐藏详情模态框
+        function hideDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        // 删除单条训练记录
+        async function deleteExercise(exerciseId) {
+            if (!confirm('确定要删除这条训练记录吗？')) return;
+
+            try {
+                await API.deleteGymExercise(exerciseId);
+                UI.showSuccess('删除成功');
+                await loadGymExercises();
+            } catch (error) {
+                UI.showError('删除失败: ' + error.message);
+            }
+        }
+
+        // 删除某天所有训练记录
+        async function deleteDayExercises(workoutDate, exerciseIds) {
+            if (!confirm(`确定要删除 ${workoutDate} 的所有训练记录吗？\n这将删除该天的 ${exerciseIds.length} 个训练动作。`)) return;
+
+            try {
+                // 并发删除所有训练记录
+                await Promise.all(exerciseIds.map(id => API.deleteGymExercise(id)));
+                UI.showSuccess('删除成功');
+                await loadGymExercises();
+            } catch (error) {
+                UI.showError('删除失败: ' + error.message);
+            }
+        }
+
+        // 应用筛选
+        function applyFilters() {
+            currentStartDate = document.getElementById('filter-start-date').value || null;
+            currentEndDate = document.getElementById('filter-end-date').value || null;
+            currentPage = 1;
+            loadGymExercises();
+        }
+
+        // 跳转页码
+        function goToPage(page) {
+            currentPage = page;
+            loadGymExercises();
+        }
+
+        // ========== 动作选择相关 ==========
+
+        // 显示动作库
+        function showExerciseLibrary() {
+            renderExerciseLibrary();
+            document.getElementById('exercise-library-modal').classList.remove('hidden');
+        }
+
+        // 隐藏动作库
+        function hideExerciseLibrary() {
+            document.getElementById('exercise-library-modal').classList.add('hidden');
+            document.getElementById('exercise-search').value = '';
+        }
+
+        // 渲染动作库
+        function renderExerciseLibrary(searchKeyword = '') {
+            const container = document.getElementById('exercise-categories');
+
+            if (searchKeyword) {
+                // 搜索模式
+                const results = searchExercises(searchKeyword);
+                if (results.length === 0) {
+                    container.innerHTML = '<p class="text-center text-gray-500 py-8">未找到匹配的动作</p>';
+                    return;
+                }
+
+                container.innerHTML = results.map(result => `
+                    <div class="border rounded-lg p-4 ${EXERCISE_LIBRARY[result.categoryKey].color}">
+                        <h4 class="font-semibold text-lg mb-3 flex items-center">
+                            <span class="text-2xl mr-2">${EXERCISE_LIBRARY[result.categoryKey].icon}</span>
+                            ${result.category}
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            ${result.exercises.map(ex => `
+                                <button
+                                    onclick="selectExercise('${ex.name}')"
+                                    class="text-left p-3 bg-white rounded-lg hover:shadow-md transition duration-200 border border-gray-200 hover:border-blue-400"
+                                >
+                                    <div class="flex items-start">
+                                        <span class="text-2xl mr-2">${ex.icon}</span>
+                                        <div class="flex-1">
+                                            <div class="font-medium text-gray-900">${ex.name}</div>
+                                            <div class="text-xs text-gray-600 mt-1">${ex.description}</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                // 显示所有分类
+                const categories = getAllCategories();
+                container.innerHTML = categories.map(category => `
+                    <div class="border rounded-lg p-4 ${category.color}">
+                        <h4 class="font-semibold text-lg mb-3 flex items-center">
+                            <span class="text-2xl mr-2">${category.icon}</span>
+                            ${category.name}
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            ${category.exercises.map(ex => `
+                                <button
+                                    onclick="selectExercise('${ex.name}')"
+                                    class="text-left p-3 bg-white rounded-lg hover:shadow-md transition duration-200 border border-gray-200 hover:border-blue-400"
+                                >
+                                    <div class="flex items-start">
+                                        <span class="text-2xl mr-2">${ex.icon}</span>
+                                        <div class="flex-1">
+                                            <div class="font-medium text-gray-900">${ex.name}</div>
+                                            <div class="text-xs text-gray-600 mt-1">${ex.description}</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 搜索动作
+        function searchExerciseLibrary(keyword) {
+            renderExerciseLibrary(keyword.trim());
+        }
+
+        // 选择动作
+        function selectExercise(exerciseName) {
+            document.getElementById('exercise-name').value = exerciseName;
+            hideExerciseLibrary();
+        }
+
+        // 提交表单
+        document.getElementById('exercise-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const sets = collectSetsData();
+            if (sets.length === 0) {
+                UI.showError('请至少添加一组训练数据');
+                return;
+            }
+
+            const exerciseData = {
+                workout_date: document.getElementById('exercise-date').value,
+                exercise_name: document.getElementById('exercise-name').value,
+                notes: document.getElementById('exercise-notes').value || null,
+                sets: sets
+            };
+
+            try {
+                if (editingExerciseId) {
+                    await API.updateGymExercise(editingExerciseId, exerciseData);
+                    UI.showSuccess('更新成功');
+                } else {
+                    await API.createGymExercise(exerciseData);
+                    UI.showSuccess('添加成功');
+                }
+                hideExerciseModal();
+                await loadGymExercises();
+            } catch (error) {
+                UI.showError('操作失败: ' + error.message);
+            }
+        });
+
+        // 趋势图表相关
+        let trendChartInstance = null;
+        let allExercises = []; // 存储所有已训练的动作
+
+        // 显示趋势图表
+        async function showTrendChart(exerciseName) {
+            try {
+                // 获取趋势数据
+                const trendData = await API.getExerciseTrends(exerciseName);
+
+                if (trendData.dates.length === 0) {
+                    UI.showError('该动作还没有训练记录');
+                    return;
+                }
+
+                // 更新模态框标题
+                document.getElementById('trend-modal-title').textContent = `${exerciseName} - 进度趋势`;
+
+                // 销毁之前的图表实例
+                if (trendChartInstance) {
+                    trendChartInstance.destroy();
+                }
+
+                // 创建图表
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                trendChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: trendData.dates,
+                        datasets: [
+                            {
+                                label: '最大重量 (kg)',
+                                data: trendData.max_weights,
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.3,
+                                yAxisID: 'y',
+                            },
+                            {
+                                label: '平均重量 (kg)',
+                                data: trendData.avg_weights,
+                                borderColor: 'rgb(16, 185, 129)',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.3,
+                                yAxisID: 'y',
+                            },
+                            {
+                                label: '总次数',
+                                data: trendData.total_reps,
+                                borderColor: 'rgb(245, 158, 11)',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                tension: 0.3,
+                                yAxisID: 'y1',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: '重量 (kg)'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: '次数'
+                                },
+                                grid: {
+                                    drawOnChartArea: false,
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 显示模态框
+                document.getElementById('trend-modal').classList.remove('hidden');
+            } catch (error) {
+                UI.showError('加载趋势数据失败: ' + error.message);
+            }
+        }
+
+        // 隐藏趋势模态框
+        function hideTrendModal() {
+            document.getElementById('trend-modal').classList.add('hidden');
+        }
+
+        // 显示动作选择器
+        async function showExerciseSelector() {
+            try {
+                // 获取所有已训练的动作
+                const response = await API.getExerciseNames();
+                allExercises = response.exercise_names;
+
+                if (allExercises.length === 0) {
+                    UI.showError('还没有训练记录');
+                    return;
+                }
+
+                // 渲染动作列表
+                renderExerciseList(allExercises);
+
+                // 清空搜索框
+                document.getElementById('exercise-search').value = '';
+
+                // 显示模态框
+                document.getElementById('exercise-selector-modal').classList.remove('hidden');
+            } catch (error) {
+                UI.showError('加载动作列表失败: ' + error.message);
+            }
+        }
+
+        // 隐藏动作选择器
+        function hideExerciseSelector() {
+            document.getElementById('exercise-selector-modal').classList.add('hidden');
+        }
+
+        // 渲染动作列表
+        function renderExerciseList(exercises) {
+            const container = document.getElementById('exercise-list');
+
+            if (exercises.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">未找到匹配的动作</p>';
+                return;
+            }
+
+            container.innerHTML = exercises.map(name => `
+                <button
+                    onclick="selectExerciseForTrend('${name}')"
+                    class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition duration-200 border border-gray-200 hover:border-purple-300"
+                >
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-900">${name}</span>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        // 过滤动作列表
+        function filterExerciseList() {
+            const keyword = document.getElementById('exercise-search').value.toLowerCase();
+            const filteredExercises = allExercises.filter(name =>
+                name.toLowerCase().includes(keyword)
+            );
+            renderExerciseList(filteredExercises);
+        }
+
+        // 选择动作查看趋势
+        function selectExerciseForTrend(exerciseName) {
+            hideExerciseSelector();
+            showTrendChart(exerciseName);
+        }
+
+        // 页面加载时加载数据
+        (async () => {
+            try {
+                const user = await API.getCurrentUser();
+                document.getElementById('user-email').textContent = user.email;
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        })();
+        loadGymExercises();
+    </script>
+</body>
+</html>

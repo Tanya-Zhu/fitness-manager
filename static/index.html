@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的健身计划 - 运动管家</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-blue-600">🏃 运动管家</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-blue-600 font-semibold">健身计划</a>
+                    <a href="/workout-logs.html" class="text-gray-600 hover:text-gray-900">运动记录</a>
+                    <a href="/gym-exercises.html" class="text-gray-600 hover:text-gray-900">器械训练</a>
+                    <span id="user-email" class="text-gray-700"></span>
+                    <button
+                        onclick="Auth.logout()"
+                        class="text-gray-600 hover:text-gray-900"
+                    >
+                        退出登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="error-container"></div>
+        <div id="success-container"></div>
+
+        <!-- 头部操作区 -->
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">我的健身计划</h2>
+            <a
+                href="/create-plan.html"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200 font-medium"
+            >
+                + 创建新计划
+            </a>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="mb-6 flex space-x-4">
+            <button
+                onclick="filterPlans('all')"
+                id="filter-all"
+                class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium"
+            >
+                全部
+            </button>
+            <button
+                onclick="filterPlans('active')"
+                id="filter-active"
+                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+                进行中
+            </button>
+            <button
+                onclick="filterPlans('paused')"
+                id="filter-paused"
+                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+                已暂停
+            </button>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="text-center py-12" style="display: none;">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="mt-4 text-gray-600">加载中...</p>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="empty-state" class="text-center py-12" style="display: none;">
+            <div class="text-6xl mb-4">📋</div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">还没有健身计划</h3>
+            <p class="text-gray-500 mb-6">创建你的第一个健身计划，开始健康生活！</p>
+            <a
+                href="/create-plan.html"
+                class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-medium"
+            >
+                创建第一个计划
+            </a>
+        </div>
+
+        <!-- 我创建的计划 -->
+        <div id="my-plans-section" style="display: none;">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                我创建的计划
+            </h3>
+            <div id="my-plans-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <!-- 我创建的计划卡片将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 我参加的计划 -->
+        <div id="joined-plans-section" style="display: none;">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                我参加的计划
+            </h3>
+            <div id="joined-plans-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 我参加的计划卡片将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 分页 -->
+        <div id="pagination" class="mt-8 flex justify-center" style="display: none;">
+            <button
+                id="prev-page"
+                onclick="changePage(-1)"
+                class="px-4 py-2 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                上一页
+            </button>
+            <span id="page-info" class="px-6 py-2 bg-white border-t border-b border-gray-300">
+                第 1 页
+            </span>
+            <button
+                id="next-page"
+                onclick="changePage(1)"
+                class="px-4 py-2 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                下一页
+            </button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // 检查登录状态
+        if (!Auth.requireAuth()) {
+            // 如果未登录会自动跳转
+        }
+
+        let currentPage = 1;
+        let currentFilter = null;
+        let totalPages = 1;
+
+        // 加载用户信息
+        async function loadUserInfo() {
+            try {
+                const user = await API.getCurrentUser();
+                document.getElementById('user-email').textContent = user.email;
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        }
+
+        // 加载计划列表
+        async function loadPlans() {
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('empty-state');
+            const myPlansSection = document.getElementById('my-plans-section');
+            const joinedPlansSection = document.getElementById('joined-plans-section');
+            const myPlansContainer = document.getElementById('my-plans-container');
+            const joinedPlansContainer = document.getElementById('joined-plans-container');
+            const pagination = document.getElementById('pagination');
+
+            loading.style.display = 'block';
+            emptyState.style.display = 'none';
+            myPlansSection.style.display = 'none';
+            joinedPlansSection.style.display = 'none';
+            myPlansContainer.innerHTML = '';
+            joinedPlansContainer.innerHTML = '';
+            pagination.style.display = 'none';
+
+            try {
+                const response = await API.getPlans(currentPage, 12, currentFilter);
+                const { plans, pagination: paginationData } = response;
+
+                loading.style.display = 'none';
+
+                if (plans.length === 0) {
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                // 分离我创建的和我参加的计划
+                const myPlans = plans.filter(plan => plan.is_owner);
+                const joinedPlans = plans.filter(plan => !plan.is_owner);
+
+                // 渲染我创建的计划
+                if (myPlans.length > 0) {
+                    myPlansSection.style.display = 'block';
+                    myPlans.forEach(plan => {
+                        myPlansContainer.innerHTML += createPlanCard(plan, true);
+                    });
+                }
+
+                // 渲染我参加的计划
+                if (joinedPlans.length > 0) {
+                    joinedPlansSection.style.display = 'block';
+                    joinedPlans.forEach(plan => {
+                        joinedPlansContainer.innerHTML += createPlanCard(plan, false);
+                    });
+                }
+
+                // 显示分页
+                totalPages = paginationData.total_pages;
+                if (totalPages > 1) {
+                    pagination.style.display = 'flex';
+                    document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 页`;
+                    document.getElementById('prev-page').disabled = currentPage === 1;
+                    document.getElementById('next-page').disabled = currentPage === totalPages;
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                UI.showError('加载计划列表失败: ' + error.message);
+            }
+        }
+
+        // 创建计划卡片HTML
+        function createPlanCard(plan, isOwner) {
+            const statusBadge = plan.status === 'active'
+                ? '<span class="inline-block px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded">进行中</span>'
+                : '<span class="inline-block px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded">已暂停</span>';
+
+            // 只有创建者才显示删除按钮
+            const deleteButton = isOwner
+                ? `<button
+                    onclick="deletePlan('${plan.id}')"
+                    class="bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition duration-200"
+                >
+                    删除
+                </button>`
+                : '';
+
+            // 根据是否是创建者调整查看详情按钮的样式
+            const detailButtonClass = isOwner
+                ? 'flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200'
+                : 'w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200';
+
+            // 为非创建者显示创建人信息
+            const ownerInfo = !isOwner && plan.owner_email
+                ? `<span class="text-sm text-gray-500 ml-2">by ${plan.owner_email}</span>`
+                : '';
+
+            return `
+                <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-900 inline">${plan.name}</h3>
+                                ${ownerInfo}
+                            </div>
+                            ${statusBadge}
+                        </div>
+
+                        ${plan.description ? `<p class="text-gray-600 mb-4">${plan.description}</p>` : ''}
+
+                        <div class="flex items-center text-sm text-gray-500 mb-4">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                            ${plan.exercise_count} 个锻炼项目
+                        </div>
+
+                        <div class="flex space-x-2">
+                            <a
+                                href="/plan-detail.html?id=${plan.id}"
+                                class="${detailButtonClass}"
+                            >
+                                查看详情
+                            </a>
+                            ${deleteButton}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 筛选计划
+        function filterPlans(status) {
+            currentFilter = status === 'all' ? null : status;
+            currentPage = 1;
+
+            // 更新按钮样式
+            document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+                btn.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300';
+            });
+            document.getElementById(`filter-${status}`).className = 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium';
+
+            loadPlans();
+        }
+
+        // 翻页
+        function changePage(direction) {
+            currentPage += direction;
+            loadPlans();
+        }
+
+        // 删除计划
+        async function deletePlan(planId) {
+            if (!confirm('确定要删除这个健身计划吗？删除后无法恢复。')) {
+                return;
+            }
+
+            try {
+                await API.deletePlan(planId);
+                UI.showSuccess('计划已删除');
+                loadPlans();
+            } catch (error) {
+                UI.showError('删除失败: ' + error.message);
+            }
+        }
+
+        // 页面加载时执行
+        loadUserInfo();
+        loadPlans();
+    </script>
+</body>
+</html>

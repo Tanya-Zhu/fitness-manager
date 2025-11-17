@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运动记录 - 运动管家</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-blue-600">🏃 运动管家</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">健身计划</a>
+                    <a href="/workout-logs.html" class="text-blue-600 font-semibold">运动记录</a>
+                    <a href="/gym-exercises.html" class="text-gray-600 hover:text-gray-900">器械训练</a>
+                    <span id="user-email" class="text-gray-700"></span>
+                    <button onclick="Auth.logout()" class="text-gray-600 hover:text-gray-900">退出登录</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="error-container"></div>
+        <div id="success-container"></div>
+
+        <!-- 页面标题和操作 -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">运动记录</h1>
+                <p class="mt-2 text-gray-600">记录您的日常运动情况</p>
+            </div>
+            <button
+                onclick="showAddWorkoutModal()"
+                class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200"
+            >
+                + 添加运动记录
+            </button>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div id="stats-container" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- 统计数据将在这里动态生成 -->
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-900">运动趋势</h2>
+                <div class="flex space-x-2">
+                    <button
+                        id="chart-week-btn"
+                        onclick="switchChartPeriod('week')"
+                        class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition duration-200"
+                    >
+                        按周
+                    </button>
+                    <button
+                        id="chart-month-btn"
+                        onclick="switchChartPeriod('month')"
+                        class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-200"
+                    >
+                        按月
+                    </button>
+                </div>
+            </div>
+            <div class="relative" style="height: 400px;">
+                <canvas id="workoutChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
+                    <input
+                        type="date"
+                        id="filter-start-date"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">结束日期</label>
+                    <input
+                        type="date"
+                        id="filter-end-date"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+                <div class="flex items-end">
+                    <button
+                        onclick="applyFilters()"
+                        class="w-full bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition duration-200"
+                    >
+                        筛选
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 运动记录列表 -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div id="workout-logs-list">
+                <!-- 运动记录将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 分页 -->
+        <div id="pagination-container" class="mt-6"></div>
+    </div>
+
+    <!-- 添加/编辑运动记录模态框 -->
+    <div id="workout-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-900 mb-6">添加运动记录</h3>
+
+            <form id="workout-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">运动日期 *</label>
+                        <input
+                            type="date"
+                            id="workout-date"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">运动名称 *</label>
+                        <input
+                            type="text"
+                            id="workout-name"
+                            required
+                            placeholder="例如: 跑步、游泳、瑜伽"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">运动时长（分钟）*</label>
+                        <input
+                            type="number"
+                            id="workout-duration"
+                            required
+                            min="1"
+                            placeholder="30"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">消耗卡路里</label>
+                        <input
+                            type="number"
+                            id="workout-calories"
+                            min="0"
+                            step="0.1"
+                            placeholder="200"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">备注</label>
+                        <textarea
+                            id="workout-notes"
+                            rows="3"
+                            placeholder="记录运动感受、心得等..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4 mt-6">
+                    <button
+                        type="button"
+                        onclick="hideWorkoutModal()"
+                        class="flex-1 bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+                    >
+                        取消
+                    </button>
+                    <button
+                        type="submit"
+                        class="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+                    >
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // 检查登录状态
+        if (!Auth.requireAuth()) {
+            window.location.href = '/login.html';
+        }
+
+        let currentPage = 1;
+        let currentStartDate = null;
+        let currentEndDate = null;
+        let editingWorkoutId = null;
+        let workoutChart = null;
+        let currentChartPeriod = 'week';
+
+        // 加载图表数据
+        async function loadChartData() {
+            try {
+                const response = await API.getWorkoutChartData(currentChartPeriod, 12);
+
+                const labels = response.data_points.map(dp => dp.label);
+                const workouts = response.data_points.map(dp => dp.workouts);
+                const durations = response.data_points.map(dp => dp.duration_minutes);
+                const calories = response.data_points.map(dp => dp.calories);
+
+                // 销毁旧图表实例
+                if (workoutChart) {
+                    workoutChart.destroy();
+                }
+
+                // 创建新图表
+                const ctx = document.getElementById('workoutChart').getContext('2d');
+                workoutChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '运动次数',
+                                data: workouts,
+                                backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y',
+                            },
+                            {
+                                label: '运动时长（分钟）',
+                                data: durations,
+                                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                                borderColor: 'rgba(16, 185, 129, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y1',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: '运动次数'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: '运动时长（分钟）'
+                                },
+                                grid: {
+                                    drawOnChartArea: false,
+                                },
+                            },
+                        }
+                    },
+                });
+            } catch (error) {
+                console.error('加载图表失败:', error);
+            }
+        }
+
+        // 切换图表周期
+        function switchChartPeriod(period) {
+            currentChartPeriod = period;
+
+            // 更新按钮样式
+            const weekBtn = document.getElementById('chart-week-btn');
+            const monthBtn = document.getElementById('chart-month-btn');
+
+            if (period === 'week') {
+                weekBtn.className = 'px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition duration-200';
+                monthBtn.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-200';
+            } else {
+                weekBtn.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-200';
+                monthBtn.className = 'px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition duration-200';
+            }
+
+            // 重新加载图表数据
+            loadChartData();
+        }
+
+        // 加载运动记录列表
+        async function loadWorkoutLogs() {
+            try {
+                const response = await API.getWorkoutLogs(
+                    currentPage,
+                    20,
+                    currentStartDate,
+                    currentEndDate
+                );
+
+                displayStats(response.stats);
+                displayWorkoutLogs(response.workout_logs);
+                displayPagination(response.pagination);
+            } catch (error) {
+                UI.showError('加载失败: ' + error.message);
+            }
+        }
+
+        // 显示统计数据
+        function displayStats(stats) {
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.innerHTML = `
+                <div class="bg-blue-50 rounded-lg p-6">
+                    <div class="text-sm text-blue-600 mb-1">总运动次数</div>
+                    <div class="text-3xl font-bold text-blue-900">${stats.total_workouts}</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-6">
+                    <div class="text-sm text-green-600 mb-1">总运动时长</div>
+                    <div class="text-3xl font-bold text-green-900">${stats.total_duration_minutes} 分钟</div>
+                </div>
+                <div class="bg-yellow-50 rounded-lg p-6">
+                    <div class="text-sm text-yellow-600 mb-1">总消耗卡路里</div>
+                    <div class="text-3xl font-bold text-yellow-900">${stats.total_calories.toFixed(0)}</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-6">
+                    <div class="text-sm text-purple-600 mb-1">平均时长</div>
+                    <div class="text-3xl font-bold text-purple-900">${stats.avg_duration_minutes.toFixed(0)} 分钟</div>
+                </div>
+            `;
+        }
+
+        // 显示运动记录列表
+        function displayWorkoutLogs(workoutLogs) {
+            const container = document.getElementById('workout-logs-list');
+
+            if (workoutLogs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <p class="text-gray-500 text-lg">还没有运动记录</p>
+                        <button
+                            onclick="showAddWorkoutModal()"
+                            class="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                            立即添加
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">运动名称</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时长</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">卡路里</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备注</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${workoutLogs.map(log => `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.workout_date}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${log.workout_name}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${log.duration_minutes} 分钟</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${log.calories_burned ? log.calories_burned.toFixed(0) : '-'}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">${log.notes || '-'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button onclick="editWorkout('${log.id}')" class="text-blue-600 hover:text-blue-900 mr-3">编辑</button>
+                                    <button onclick="deleteWorkout('${log.id}')" class="text-red-600 hover:text-red-900">删除</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 显示分页
+        function displayPagination(pagination) {
+            const container = document.getElementById('pagination-container');
+
+            if (pagination.total_pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                pages.push(i);
+            }
+
+            container.innerHTML = `
+                <div class="flex justify-center space-x-2">
+                    ${pages.map(page => `
+                        <button
+                            onclick="goToPage(${page})"
+                            class="px-4 py-2 rounded ${page === pagination.page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}"
+                        >
+                            ${page}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 显示添加模态框
+        function showAddWorkoutModal() {
+            editingWorkoutId = null;
+            document.getElementById('modal-title').textContent = '添加运动记录';
+            document.getElementById('workout-form').reset();
+            document.getElementById('workout-date').valueAsDate = new Date();
+            document.getElementById('workout-modal').classList.remove('hidden');
+        }
+
+        // 隐藏模态框
+        function hideWorkoutModal() {
+            document.getElementById('workout-modal').classList.add('hidden');
+            editingWorkoutId = null;
+        }
+
+        // 编辑运动记录
+        async function editWorkout(workoutId) {
+            try {
+                const workout = await API.getWorkoutLog(workoutId);
+
+                editingWorkoutId = workoutId;
+                document.getElementById('modal-title').textContent = '编辑运动记录';
+                document.getElementById('workout-date').value = workout.workout_date;
+                document.getElementById('workout-name').value = workout.workout_name;
+                document.getElementById('workout-duration').value = workout.duration_minutes;
+                document.getElementById('workout-calories').value = workout.calories_burned || '';
+                document.getElementById('workout-notes').value = workout.notes || '';
+                document.getElementById('workout-modal').classList.remove('hidden');
+            } catch (error) {
+                UI.showError('加载失败: ' + error.message);
+            }
+        }
+
+        // 删除运动记录
+        async function deleteWorkout(workoutId) {
+            if (!confirm('确定要删除这条运动记录吗？')) return;
+
+            try {
+                await API.deleteWorkoutLog(workoutId);
+                UI.showSuccess('删除成功');
+                await loadWorkoutLogs();
+                await loadChartData();
+            } catch (error) {
+                UI.showError('删除失败: ' + error.message);
+            }
+        }
+
+        // 应用筛选
+        function applyFilters() {
+            currentStartDate = document.getElementById('filter-start-date').value || null;
+            currentEndDate = document.getElementById('filter-end-date').value || null;
+            currentPage = 1;
+            loadWorkoutLogs();
+        }
+
+        // 跳转页码
+        function goToPage(page) {
+            currentPage = page;
+            loadWorkoutLogs();
+        }
+
+        // 提交表单
+        document.getElementById('workout-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const workoutData = {
+                workout_date: document.getElementById('workout-date').value,
+                workout_name: document.getElementById('workout-name').value,
+                duration_minutes: parseInt(document.getElementById('workout-duration').value),
+                calories_burned: parseFloat(document.getElementById('workout-calories').value) || null,
+                notes: document.getElementById('workout-notes').value || null,
+            };
+
+            try {
+                if (editingWorkoutId) {
+                    await API.updateWorkoutLog(editingWorkoutId, workoutData);
+                    UI.showSuccess('更新成功');
+                } else {
+                    await API.createWorkoutLog(workoutData);
+                    UI.showSuccess('添加成功');
+                }
+                hideWorkoutModal();
+                await loadWorkoutLogs();
+                await loadChartData();
+            } catch (error) {
+                UI.showError('操作失败: ' + error.message);
+            }
+        });
+
+        // 页面加载时加载数据
+        (async () => {
+            try {
+                const user = await API.getCurrentUser();
+                document.getElementById('user-email').textContent = user.email;
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        })();
+        loadWorkoutLogs();
+        loadChartData();
+    </script>
+</body>
+</html>

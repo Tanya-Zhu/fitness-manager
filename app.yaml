@@ -1,0 +1,71 @@
+# anker-launch 应用配置文件 (如果平台需要)
+# App configuration for anker-launch platform
+
+# 应用名称
+name: fitness-manager
+
+# Python 运行时
+runtime: python311
+
+# 入口点 (如果 Procfile 不生效，使用此配置)
+entrypoint: uvicorn src.main:app --host 0.0.0.0 --port $PORT --workers 2
+
+# 构建配置
+build:
+  # 安装依赖
+  install:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+
+  # 构建后脚本
+  post_build:
+    - echo "Build completed successfully"
+
+# 运行配置
+run:
+  # 数据库迁移 (在启动应用前运行)
+  pre_start:
+    - alembic upgrade head
+
+  # 启动命令
+  start: uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+
+# 环境变量 (从平台控制台配置)
+env_variables:
+  APP_ENV: production
+  LOG_LEVEL: INFO
+  API_V1_PREFIX: /api/v1
+  DEFAULT_PAGE_SIZE: 20
+  MAX_PAGE_SIZE: 100
+
+# 静态文件配置
+static_files:
+  - path: /
+    directory: static
+
+# 健康检查
+health_check:
+  path: /health
+  interval: 30
+  timeout: 10
+  retries: 3
+
+# 资源配置
+resources:
+  cpu: 1
+  memory: 512Mi
+
+# 自动扩缩容
+autoscaling:
+  min_instances: 1
+  max_instances: 4
+  target_cpu_utilization: 70
+
+# 服务
+services:
+  - type: postgres
+    name: database
+    version: 15
+  - type: redis
+    name: cache
+    version: 7
