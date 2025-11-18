@@ -27,5 +27,5 @@ EXPOSE 8000
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1
 
-# 启动命令（使用 Procfile 中的命令）
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 启动命令 - 先运行数据库迁移，再启动应用
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
