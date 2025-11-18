@@ -20,12 +20,12 @@ class Settings(BaseSettings):
     # Database
     database_url: str
 
-    # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    # Redis (使用 memory:// 可以不依赖 Redis 服务)
+    redis_url: str = "memory://"
 
     # JWT
     jwt_secret_key: str
-    jwt_algorithm: str = "RS256"
+    jwt_algorithm: str = "HS256"  # 使用对称加密算法
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
