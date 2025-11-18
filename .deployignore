@@ -1,0 +1,89 @@
+# 部署时不需要上传的文件和目录
+# Files and directories to exclude from deployment
+
+# Git
+.git/
+.gitignore
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 本地环境变量（不要上传实际的 .env 文件！）
+.env
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# 日志
+*.log
+
+# 本地数据库文件
+*.db
+*.sqlite3
+fitness*.db
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 进程文件
+.server.pid
+.tunnel.pid
+.tunnel_url
+
+# Specify 配置（项目管理工具）
+.specify/
+
+# Claude 配置
+.claude/
+
+# 本地脚本（部署后不需要）
+monitor.sh
+start-lite.sh
+start-monitor.sh
+stop-monitor.sh
+get-url.sh
+status.sh
+stop.sh
+start.sh
+start-background.sh
+
+# 文档（可选，如果想减小包大小）
+# QUICKSTART.md
+# USAGE_GUIDE.md
+# WEB_GUIDE.md
+# START.md
+
+# 开发依赖
+requirements-dev.txt
+
+# Docker 相关（平台不需要）
+docker-compose.yml
+
+# 检查脚本（本地使用）
+check-deployment.sh

@@ -89,3 +89,14 @@ Desktop.ini
 *.tmp
 *.temp
 *.swp
+*.pid
+.tunnel_url
+
+# Deployment packages
+*.tar.gz
+*.zip
+fitness-manager-deploy*
+
+# Server logs
+server.log
+tunnel.log

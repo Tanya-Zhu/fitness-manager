@@ -1,0 +1,716 @@
+openapi: 3.0.3
+info:
+  title: 运动管家 - 健身计划管理 API
+  description: |
+    健身计划创建、管理和提醒功能的 RESTful API 接口。
+
+    **功能**:
+    - 创建和管理个性化健身计划
+    - 添加和编排锻炼项目
+    - 配置定时提醒通知
+    - 暂停和恢复计划
+
+    **认证**: 所有端点需要 JWT Bearer Token
+  version: 1.0.0
+  contact:
+    name: 运动管家 API Support
+servers:
+  - url: https://api.fitness-manager.example.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: plans
+    description: 健身计划管理
+  - name: exercises
+    description: 锻炼项目管理
+  - name: reminders
+    description: 提醒设置管理
+
+paths:
+  /plans:
+    get:
+      tags: [plans]
+      summary: 获取用户的健身计划列表
+      description: 返回当前用户的所有活动和暂停的健身计划（不包含已删除）
+      parameters:
+        - name: status
+          in: query
+          description: 过滤计划状态
+          required: false
+          schema:
+            type: string
+            enum: [active, paused]
+        - name: page
+          in: query
+          description: 页码（从1开始）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: 每页数量
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功返回计划列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FitnessPlanSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags: [plans]
+      summary: 创建新的健身计划
+      description: 创建一个包含锻炼项目和可选提醒的健身计划
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFitnessPlanRequest'
+      responses:
+        '201':
+          description: 计划创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitnessPlanDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /plans/{planId}:
+    get:
+      tags: [plans]
+      summary: 获取健身计划详情
+      description: 返回指定计划的完整信息，包括所有锻炼项目和提醒设置
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      responses:
+        '200':
+          description: 成功返回计划详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitnessPlanDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags: [plans]
+      summary: 更新健身计划
+      description: 更新计划的基本信息（名称、描述）
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFitnessPlanRequest'
+      responses:
+        '200':
+          description: 计划更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitnessPlanDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [plans]
+      summary: 删除健身计划
+      description: 软删除指定计划（设置 deleted_at 时间戳），同时取消所有相关提醒
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      responses:
+        '204':
+          description: 计划删除成功
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /plans/{planId}/pause:
+    patch:
+      tags: [plans]
+      summary: 暂停健身计划
+      description: 将计划状态设为 paused，停止发送所有提醒通知
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      responses:
+        '200':
+          description: 计划暂停成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitnessPlanDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /plans/{planId}/resume:
+    patch:
+      tags: [plans]
+      summary: 恢复健身计划
+      description: 将计划状态设为 active，重新启用提醒通知
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      responses:
+        '200':
+          description: 计划恢复成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitnessPlanDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /plans/{planId}/exercises:
+    post:
+      tags: [exercises]
+      summary: 添加锻炼项目到计划
+      description: 在指定计划中添加新的锻炼项目
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExerciseRequest'
+      responses:
+        '201':
+          description: 锻炼项目添加成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /plans/{planId}/exercises/{exerciseId}:
+    put:
+      tags: [exercises]
+      summary: 更新锻炼项目
+      description: 更新指定锻炼项目的信息
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+        - $ref: '#/components/parameters/ExerciseIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExerciseRequest'
+      responses:
+        '200':
+          description: 锻炼项目更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [exercises]
+      summary: 删除锻炼项目
+      description: 从计划中删除指定的锻炼项目
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+        - $ref: '#/components/parameters/ExerciseIdParam'
+      responses:
+        '204':
+          description: 锻炼项目删除成功
+        '400':
+          description: 无法删除（计划必须至少保留一个锻炼项目）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /plans/{planId}/reminders:
+    post:
+      tags: [reminders]
+      summary: 为计划添加提醒
+      description: 创建新的定时提醒配置
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReminderRequest'
+      responses:
+        '201':
+          description: 提醒添加成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /plans/{planId}/reminders/{reminderId}:
+    put:
+      tags: [reminders]
+      summary: 更新提醒配置
+      description: 修改提醒时间、频率或启用状态
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+        - $ref: '#/components/parameters/ReminderIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReminderRequest'
+      responses:
+        '200':
+          description: 提醒更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [reminders]
+      summary: 删除提醒
+      description: 删除指定的提醒配置，同时取消 APScheduler 中的调度任务
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+        - $ref: '#/components/parameters/ReminderIdParam'
+      responses:
+        '204':
+          description: 提醒删除成功
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 使用 JWT Access Token 进行认证
+
+  parameters:
+    PlanIdParam:
+      name: planId
+      in: path
+      required: true
+      description: 健身计划的唯一标识符
+      schema:
+        type: string
+        format: uuid
+
+    ExerciseIdParam:
+      name: exerciseId
+      in: path
+      required: true
+      description: 锻炼项目的唯一标识符
+      schema:
+        type: string
+        format: uuid
+
+    ReminderIdParam:
+      name: reminderId
+      in: path
+      required: true
+      description: 提醒的唯一标识符
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    FitnessPlanSummary:
+      type: object
+      description: 健身计划摘要（列表视图）
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        name:
+          type: string
+          maxLength: 50
+          example: "减脂训练计划"
+        description:
+          type: string
+          nullable: true
+          example: "每周3次有氧+力量训练"
+        status:
+          type: string
+          enum: [active, paused]
+          example: "active"
+        exercise_count:
+          type: integer
+          description: 计划包含的锻炼项目数量
+          example: 5
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-10T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-11-10T10:30:00Z"
+      required: [id, name, status, exercise_count, created_at, updated_at]
+
+    FitnessPlanDetail:
+      type: object
+      description: 健身计划完整详情
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 50
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, paused]
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+        reminders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reminder'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, name, status, exercises, reminders, created_at, updated_at]
+
+    Exercise:
+      type: object
+      description: 锻炼项目
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 100
+          example: "跑步"
+        duration_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 30
+          description: "锻炼时长（分钟），与 repetitions 二选一"
+        repetitions:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 20
+          description: "锻炼次数，与 duration_minutes 二选一"
+        intensity:
+          type: string
+          enum: [low, medium, high]
+          example: "medium"
+        order_index:
+          type: integer
+          minimum: 0
+          example: 0
+          description: "排序顺序（0-based）"
+        created_at:
+          type: string
+          format: date-time
+      required: [id, name, intensity, order_index, created_at]
+
+    Reminder:
+      type: object
+      description: 提醒设置
+      properties:
+        id:
+          type: string
+          format: uuid
+        reminder_time:
+          type: string
+          format: time
+          example: "08:00:00"
+          description: "提醒时间（HH:MM:SS）"
+        frequency:
+          type: string
+          enum: [daily, weekly, custom]
+          example: "weekly"
+        days_of_week:
+          type: array
+          nullable: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          example: [1, 3, 5]
+          description: "每周提醒日期（1=周一, 7=周日），仅 weekly 或 custom 频率需要"
+        is_enabled:
+          type: boolean
+          example: true
+          description: "是否启用提醒"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, reminder_time, frequency, is_enabled, created_at, updated_at]
+
+    CreateFitnessPlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "减脂训练计划"
+        description:
+          type: string
+          nullable: true
+          example: "每周3次有氧+力量训练"
+        exercises:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateExerciseRequest'
+        reminders:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/CreateReminderRequest'
+      required: [name, exercises]
+
+    UpdateFitnessPlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        description:
+          type: string
+          nullable: true
+      required: [name]
+
+    CreateExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "跑步"
+        duration_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 30
+        repetitions:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 20
+        intensity:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        order_index:
+          type: integer
+          minimum: 0
+          default: 0
+      required: [name]
+
+    UpdateExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        duration_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+        repetitions:
+          type: integer
+          nullable: true
+          minimum: 1
+        intensity:
+          type: string
+          enum: [low, medium, high]
+        order_index:
+          type: integer
+          minimum: 0
+
+    CreateReminderRequest:
+      type: object
+      properties:
+        reminder_time:
+          type: string
+          format: time
+          example: "08:00:00"
+        frequency:
+          type: string
+          enum: [daily, weekly, custom]
+          example: "weekly"
+        days_of_week:
+          type: array
+          nullable: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          example: [1, 3, 5]
+        is_enabled:
+          type: boolean
+          default: true
+      required: [reminder_time, frequency]
+
+    UpdateReminderRequest:
+      type: object
+      properties:
+        reminder_time:
+          type: string
+          format: time
+        frequency:
+          type: string
+          enum: [daily, weekly, custom]
+        days_of_week:
+          type: array
+          nullable: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+        is_enabled:
+          type: boolean
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total_items:
+          type: integer
+          example: 45
+        total_pages:
+          type: integer
+          example: 3
+      required: [page, page_size, total_items, total_pages]
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "计划名称不能为空"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+      required: [detail, code]
+
+  responses:
+    BadRequestError:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            validation_error:
+              value:
+                detail: "计划名称不能为空"
+                code: "VALIDATION_ERROR"
+            missing_exercises:
+              value:
+                detail: "计划必须至少包含一个锻炼项目"
+                code: "BUSINESS_RULE_VIOLATION"
+
+    UnauthorizedError:
+      description: 未认证或 Token 无效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Invalid or expired token"
+            code: "UNAUTHORIZED"
+
+    NotFoundError:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "健身计划不存在"
+            code: "NOT_FOUND"
